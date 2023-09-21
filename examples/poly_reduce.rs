@@ -54,10 +54,12 @@ fn reduce_poly<F: ScalarField>(
 	let range = RangeChip::default(lookup_bits);
 
 	// Enforce that in_assigned[i] % MODULUS = rem_assigned[i]
+	// We hardcoded MODULUS = 11 in this case, therefore
+	// rem = [0, 10], so it should be at most 4 (log2_fllor(10)) bits
 	let rem_assigned: Vec<AssignedValue<F>> = in_assigned
 	.iter()
 	.take(2 * DEGREE - 1)
-	.map(|&x|range.div_mod(ctx, x, MODULUS, 4).1) // rem: [0, 11) <- at most 4 (log2_fllor(11)) bits
+	.map(|&x|range.div_mod(ctx, x, MODULUS, 4).1)
 	.collect();
 
 	// make the output public
