@@ -1,3 +1,6 @@
+use ark_bn254::Fr;
+use ark_ff::fields::PrimeField;
+use ark_poly::{univariate::DensePolynomial, DenseUVPolynomial};
 use clap::Parser;
 use halo2_base::gates::GateChip;
 use halo2_base::safe_types::GateInstructions;
@@ -12,109 +15,114 @@ use halo2_scaffold::scaffold::cmd::Cli;
 use halo2_scaffold::scaffold::run;
 use serde::{Deserialize, Serialize};
 
-// Note:
+// Notes:
 // - The input polynomials are not made public
-// - Suppoe that range check is performed on the coeffiicients in order to avoid overflow for happen during the multiplication
-// - Patterned after https://github.com/yi-sun/circom-pairing/blob/master/circuits/bigint.circom#L227
+// - Suppose that range check is performed on the coeffiicients in order to avoid overflow for happen during the multiplication
 
-const DEGREE: usize = 3;
+// Complexity of the algorithm
+// The algorithm involves two nested loops: the outer loop runs for "2N+1" iterations and the inner loop runs for up to "N+1" iterations in the worst case.
+// The operations inside the inner loop are additions and multiplications in the field F which are O(1) operations.
+// Therefore, the complexity of the algorithm is O((2N+1)*(N+1)*1) = O(N^2)
 
+const N: usize = 3;
+
+// The polynomial multiplication is performed using the direct method.
+// Given two polynomials a and b of degree n, the product c = a * b is a polynomial of degree 2n
+// The coefficients of c are computed as dot products of the coefficients of a and b
+// The coefficients of c are made public
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CircuitInput<const DEGREE: usize> {
-    pub a: Vec<u8>, // polynomial coefficients big endian of degree DEGREE
-    pub b: Vec<u8>, // polynomial coefficients big endian of degree DEGREE
+pub struct CircuitInput<const N: usize> {
+    pub a: Vec<u8>, // polynomial coefficients little endian of degree n
+    pub b: Vec<u8>, // polynomial coefficients little endian of degree n
 }
 
 // this algorithm takes two polynomials a and b of the same degree and output their product to the public
-fn some_algorithm_in_zk<F: ScalarField>(
+fn poly_mul<F: ScalarField>(
     ctx: &mut Context<F>,
-    input: CircuitInput<DEGREE>,
+    input: CircuitInput<N>,
     make_public: &mut Vec<AssignedValue<F>>,
 ) {
     // assert that the input polynomials have the same degree
     assert_eq!(input.a.len() - 1, input.b.len() - 1);
-    // assert that degree is equal to the constant DEGREE
-    assert_eq!(input.a.len() - 1, DEGREE);
+    // assert that degree is equal to the constant N
+    assert_eq!(input.a.len() - 1, N);
 
-    // Compute the product of two polynomials (precomputated outside of the circuit)
-    let mut prod_val = vec![0; 2 * DEGREE - 1];
+    // Create a gate chip
+    let gate = GateChip::<F>::default();
 
-    for i in 0..(2 * DEGREE - 1) {
-        if i < DEGREE {
+    // Assign the input polynomials to the circuit
+    let a_assigned: Vec<AssignedValue<F>> = input
+        .a
+        .iter()
+        .map(|x| {
+            let result = F::from(*x as u64);
+            ctx.load_witness(result)
+        })
+        .collect();
+
+    let b_assigned: Vec<AssignedValue<F>> = input
+        .b
+        .iter()
+        .map(|x| {
+            let result = F::from(*x as u64);
+            ctx.load_witness(result)
+        })
+        .collect();
+
+    // Build the product of the polynomials as dot products of the coefficients of a and b
+    let mut prod_val: Vec<AssignedValue<F>> = vec![];
+    for i in 0..(2 * N + 1) {
+        let mut coefficient_accumaltor: Vec<AssignedValue<F>> = vec![];
+
+        if i < N + 1 {
             for a_idx in 0..=i {
-                prod_val[i] += input.a[a_idx] * input.b[i - a_idx];
+                let a = a_assigned[a_idx];
+                let b = b_assigned[i - a_idx];
+                // push the product of a and b to the coefficient_accumaltor
+                coefficient_accumaltor.push(gate.mul(ctx, a, b));
             }
         } else {
-            for a_idx in (i - DEGREE + 1)..DEGREE {
-                prod_val[i] += input.a[a_idx] * input.b[i - a_idx];
+            for a_idx in (i - N)..=N {
+                let a = a_assigned[a_idx];
+                let b = b_assigned[i - a_idx];
+                // push the product of a and b to the coefficient_accumaltor
+                coefficient_accumaltor.push(gate.mul(ctx, a, b));
             }
         }
+
+        let prod_value = coefficient_accumaltor
+            .iter()
+            .fold(ctx.load_witness(F::zero()), |acc, x| gate.add(ctx, acc, *x));
+
+        prod_val.push(prod_value);
     }
 
-    // assert that the output polynomial has the correct degree
-    assert_eq!(prod_val.len(), 2 * DEGREE - 1);
-
-    // create a vector of vectors to cache the exponents for different x values in range [0, 2 * k - 1)
-    // exps[i][j] = i^j exponent
-    let mut exps = vec![vec![0; 2 * DEGREE - 1]; 2 * DEGREE - 1];
-
-    for i in 0..(2 * DEGREE - 1) {
-        for j in 0..(2 * DEGREE - 1) {
-            exps[i][j] = (i as u64).pow(j as u32);
-        }
+    // Make the coefficients of the product public. The coefficients are in little endian order
+    for i in 0..(2 * N + 1) {
+        make_public.push(prod_val[i]);
     }
 
-    // Evaluate the polynomial a, b, prod for x values in [0, 2 * k - 1) (precomputed outside of the circuit)
-    let mut a_evals = vec![0_u64; 2 * DEGREE - 1];
-    let mut b_evals = vec![0_u64; 2 * DEGREE - 1];
-    let mut prod_evals = vec![0_u64; 2 * DEGREE - 1];
+    // TEST
+    // Perform the multiplication of the polynomials outside the circuit (using arkworks) to see if this matches the result of the circuit
+    let a = DensePolynomial::<Fr>::from_coefficients_vec(
+        input.a.iter().map(|x| Fr::from(*x as u64)).collect::<Vec<Fr>>(),
+    );
 
-    for i in 0..(2 * DEGREE - 1) {
-        for j in 0..(2 * DEGREE - 1) {
-            prod_evals[i] += prod_val[j] as u64 * (exps[i][j] as u64);
-        }
+    let b = DensePolynomial::<Fr>::from_coefficients_vec(
+        input.b.iter().map(|x| Fr::from(*x as u64)).collect::<Vec<Fr>>(),
+    );
 
-        for j in 0..DEGREE {
-            a_evals[i] += input.a[j] as u64 * (i as u64).pow(j as u32);
-            b_evals[i] += input.b[j] as u64 * (i as u64).pow(j as u32);
-        }
-    }
+    let c: DensePolynomial<Fr> = &a * &b;
 
-    // Now let's assign the precomputed values inside the circuit
-    let a_evals_assigned: Vec<AssignedValue<F>> = a_evals
-        .iter()
-        .map(|x| {
-            let result = F::from(*x);
-            ctx.load_witness(result)
-        })
-        .collect();
+    // Turn coefficients to string
+    let c_coeffs = c.coeffs.iter().map(|x| x.into_bigint().to_string()).collect::<Vec<String>>();
 
-    let b_evals_assigned: Vec<AssignedValue<F>> = b_evals
-        .iter()
-        .map(|x| {
-            let result = F::from(*x);
-            ctx.load_witness(result)
-        })
-        .collect();
+    // iter over the c coefficients and turn it into F
+    let c_f = c_coeffs.iter().map(|x| F::from_str_vartime(x).unwrap()).collect::<Vec<F>>();
 
-    let prod_evals_assigned: Vec<AssignedValue<F>> = prod_evals
-        .iter()
-        .map(|x| {
-            let result = F::from(*x);
-            ctx.load_witness(result)
-        })
-        .collect();
-
-    // assert the correct length of the assigned polynomails
-    assert_eq!(a_evals_assigned.len(), b_evals_assigned.len());
-    assert_eq!(b_evals_assigned.len(), prod_evals_assigned.len());
-
-    // Enforce that a_evals_assigned[i] * b_evals_assigned[i] = prod_evals_assigned[i]
-    let gate = GateChip::<F>::default();
-    for i in 0..(2 * DEGREE - 1) {
-        let val =
-            gate.mul_add(ctx, a_evals_assigned[i], b_evals_assigned[i], prod_evals_assigned[i]);
-        make_public.push(val);
+    // Compare the result of the circuit with the result of the multiplication
+    for (prod, c) in prod_val.iter().zip(c_f) {
+        assert_eq!(prod.value(), &c);
     }
 }
 
@@ -124,5 +132,5 @@ fn main() {
     let args = Cli::parse();
 
     // run different zk commands based on the command line arguments
-    run(some_algorithm_in_zk, args);
+    run(poly_mul, args);
 }

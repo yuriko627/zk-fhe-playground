@@ -218,5 +218,11 @@ cargo run --example polymul -- --name poly_input  -k 11  mock
 cargo run --example polyadd -- --name poly_input  -k 11  mock
 ```
 
+### `PolyScalarMul`
+
+```bash
+cargo run --example polyscalarmul -- --name poly_input_2  -k 11  mock
+```
+
 
 
