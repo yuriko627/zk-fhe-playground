@@ -224,11 +224,16 @@ cargo run --example polyadd -- --name poly_input  -k 11  mock
 cargo run --example polyscalarmul -- --name poly_input_2  -k 11  mock
 ```
 
-### `CheckPolyFromDistribution`
+### `CheckPolyFromDistributionChiError`
 
 ```bash
 LOOKUP_BITS=9 cargo run --example check_poly_from_distribution_chi_error -- --name poly_input_3 -k 11  mock
 ```
 
+### `CheckPolyFromDistributionChiKey`
+
+```bash
+cargo run --example check_poly_from_distribution_chi_key -- --name poly_input_3 -k 11  mock
+```
 
 
