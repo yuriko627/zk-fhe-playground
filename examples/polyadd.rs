@@ -69,7 +69,7 @@ fn poly_add<F: ScalarField>(
         .map(|(&a, &b)| gate.add(ctx, a, b))
         .collect();
 
-    for i in 0..(N - 1) {
+    for i in 0..(N + 1) {
         make_public.push(sum_assigned[i]);
     }
 
