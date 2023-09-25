@@ -34,12 +34,12 @@ fn check_poly_from_distribution<F: ScalarField>(
     input: CircuitInput<N>,
     make_public: &mut Vec<AssignedValue<F>>,
 ) {
-    // Since we cannot represent negative numbers in the circuit, the value - 1 is represented as the field element q - 1.
-    // Therefore we split the range [-b, b] into two ranges [0, b] and [q-b, q-1]
-    // First of all, test outside the circuit that the coefficients of the polynomial are in the range [0, b] or in the range [q-b, q-1]
-    for i in 0..N {
-        assert!((input.a[i] <= B) || (Q - B <= input.a[i] && input.a[i] < Q));
-    }
+    // // Since we cannot represent negative numbers in the circuit, the value - 1 is represented as the field element q - 1.
+    // // Therefore we split the range [-b, b] into two ranges [0, b] and [q-b, q-1]
+    // // First of all, test outside the circuit that the coefficients of the polynomial are in the range [0, b] or in the range [q-b, q-1]
+    // for i in 0..N + 1 {
+    //     assert!((input.a[i] <= B) || (Q - B <= input.a[i] && input.a[i] < Q));
+    // }
 
     // Assign the input polynomial to the circuit
     let a_assigned: Vec<AssignedValue<F>> = input
@@ -66,7 +66,7 @@ fn check_poly_from_distribution<F: ScalarField>(
 
     // 1. Check that a_assigned[i] is in the range [0, b] and store the boolean result in in_partial_range_1_vec
     let mut in_partial_range_1_vec = Vec::new();
-    for i in 0..N {
+    for i in 0..N + 1 {
         let in_partial_range_1 = range.is_less_than_safe(ctx, a_assigned[i], B + 1);
         in_partial_range_1_vec.push(in_partial_range_1);
     }
@@ -78,22 +78,21 @@ fn check_poly_from_distribution<F: ScalarField>(
     // The boolean assigned to `in_partial_range_2_vec` is true if both conditions are satisfied (`in_range_lower_bound` AND `in_range_upper_bound`)
 
     let mut in_range_lower_bound_vec = Vec::new();
-    for i in 0..N {
+    for i in 0..N + 1 {
         let not_in_range_lower_bound = range.is_less_than_safe(ctx, a_assigned[i], Q - B);
-
         let in_range_range_lower_bound = range.gate.not(ctx, not_in_range_lower_bound);
         in_range_lower_bound_vec.push(in_range_range_lower_bound);
     }
 
     let mut in_range_upper_bound_vec = Vec::new();
-    for i in 0..N {
+    for i in 0..N + 1 {
         let in_range_upper_bound = range.is_less_than_safe(ctx, a_assigned[i], Q);
         in_range_upper_bound_vec.push(in_range_upper_bound);
     }
 
     // Perform (`in_range_lower_bound_vec` AND `in_range_upper_bound_vec`) to check that a_assigned[i] is in the range [q-b, q-1] assign the result to in_partial_range_2_vec
     let mut in_partial_range_2_vec = Vec::new();
-    for i in 0..N {
+    for i in 0..N + 1 {
         let in_partial_range_2 =
             range.gate.and(ctx, in_range_lower_bound_vec[i], in_range_upper_bound_vec[i]);
         in_partial_range_2_vec.push(in_partial_range_2);
@@ -101,14 +100,15 @@ fn check_poly_from_distribution<F: ScalarField>(
 
     // 3. Perform (`in_partial_range_1_vec` OR `in_partial_range_2_vec`) to check that a_assigned[i] is in the range [0, b] [q-b, q-1]
     let mut in_range_vec = Vec::new();
-    for i in 0..N {
+    for i in 0..N + 1 {
         let in_range = range.gate.or(ctx, in_partial_range_1_vec[i], in_partial_range_2_vec[i]);
         in_range_vec.push(in_range);
     }
 
     // 4. Enforce that in_range_vec[i] = true
-    for i in 0..N {
-        range.gate.is_equal(ctx, in_range_vec[i], Constant(F::from(1)));
+    for i in 0..N + 1 {
+        let bool = range.gate.is_equal(ctx, in_range_vec[i], Constant(F::from(1)));
+        range.gate.assert_is_const(ctx, &bool, &F::from(1));
     }
 }
 

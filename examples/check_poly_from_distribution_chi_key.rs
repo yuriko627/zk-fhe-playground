@@ -35,7 +35,6 @@ fn check_poly_from_distribution<F: ScalarField>(
     // Each coefficient of the polynomial should be in range [0, 1, q-1]
     // First of all, test outside the circuit that the coefficients of the polynomial are in the range [0, 1, q-1]
     for i in 0..N + 1 {
-        println!("input.a[i] = {}", input.a[i]);
         assert!((input.a[i] == 0) || (input.a[i] == 1) || (input.a[i] == Q - 1));
     }
 
