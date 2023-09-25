@@ -233,7 +233,7 @@ LOOKUP_BITS=9 cargo run --example check_poly_from_distribution_chi_error -- --na
 ### `CheckPolyFromDistributionChiKey`
 
 ```bash
-cargo run --example check_poly_from_distribution_chi_key -- --name poly_input_3 -k 11  mock
+cargo run --example check_poly_from_distribution_chi_key -- --name poly_input_4 -k 11  mock
 ```
 
 

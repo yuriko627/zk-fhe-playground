@@ -34,7 +34,8 @@ fn check_poly_from_distribution<F: ScalarField>(
     // Since we cannot represent negative numbers in the circuit, the value - 1 is represented as the field element q - 1.
     // Each coefficient of the polynomial should be in range [0, 1, q-1]
     // First of all, test outside the circuit that the coefficients of the polynomial are in the range [0, 1, q-1]
-    for i in 0..N {
+    for i in 0..N + 1 {
+        println!("input.a[i] = {}", input.a[i]);
         assert!((input.a[i] == 0) || (input.a[i] == 1) || (input.a[i] == Q - 1));
     }
 
@@ -54,7 +55,7 @@ fn check_poly_from_distribution<F: ScalarField>(
     let gate = GateChip::<F>::default();
 
     // loop over all the coefficients of the polynomial
-    for i in 0..N {
+    for i in 0..N + 1 {
         let coeff = a_assigned[i];
 
         // constrain (a - 0)
@@ -73,7 +74,8 @@ fn check_poly_from_distribution<F: ScalarField>(
         let factor_1_2_3 = gate.mul(ctx, factor_1_2, factor_3);
 
         // constrain (a - 0) * (a - 1) * (a - (q-1)) = 0
-        gate.is_zero(ctx, factor_1_2_3);
+        let bool = gate.is_zero(ctx, factor_1_2_3);
+        gate.assert_is_const(ctx, &bool, &F::from(1));
     }
 }
 
