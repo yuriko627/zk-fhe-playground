@@ -17,13 +17,13 @@ use serde::{Deserialize, Serialize};
 
 // Note:
 // - The input polynomial and the scalar are not made public
-// - Suppose that range check is performed on the coeffiicients in order to avoid overflow for happen during the addition
+// - No range check is performed after multiplication
 
 const N: usize = 3;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CircuitInput<const N: usize> {
-    pub a: Vec<u8>, // polynomial coefficients little endian of degree N
+    pub a: Vec<u8>, // polynomial coefficients little endian of degree N (first element = constant term)
     pub k: u8,      // scalar
 }
 

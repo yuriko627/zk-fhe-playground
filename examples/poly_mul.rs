@@ -32,12 +32,12 @@ const N: usize = 3;
 // The coefficients of c are made public
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CircuitInput<const N: usize> {
-    pub a: Vec<u8>, // polynomial coefficients little endian of degree n
-    pub b: Vec<u8>, // polynomial coefficients little endian of degree n
+    pub a: Vec<u8>, // polynomial coefficients little endian of degree n (first element = constant term)
+    pub b: Vec<u8>, // polynomial coefficients little endian of degree n (first element = constant term)
 }
 
 // this algorithm takes two polynomials a and b of the same degree and output their product to the public
-fn poly_mul<F: ScalarField>(
+pub fn poly_mul<F: ScalarField>(
     ctx: &mut Context<F>,
     input: CircuitInput<N>,
     make_public: &mut Vec<AssignedValue<F>>,

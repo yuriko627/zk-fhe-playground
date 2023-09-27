@@ -17,14 +17,14 @@ use serde::{Deserialize, Serialize};
 
 // Note:
 // - The input polynomials are not made public
-// - Suppose that range check is performed on the coeffiicients in order to avoid overflow for happen during the addition
+// - No range check is performed after addition
 
 const N: usize = 3;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CircuitInput<const N: usize> {
-    pub a: Vec<u8>, // polynomial coefficients little endian of degree N
-    pub b: Vec<u8>, // polynomial coefficients little endian of degree N
+    pub a: Vec<u8>, // polynomial coefficients little endian of degree N (first element = constant term)
+    pub b: Vec<u8>, // polynomial coefficients little endian of degree N (first element = constant term)
 }
 
 // this algorithm takes two polynomials a and b of the same degree and output their sum to the public
@@ -96,6 +96,7 @@ fn poly_add<F: ScalarField>(
         assert_eq!(sum.value(), &c);
     }
 }
+
 
 fn main() {
     env_logger::init();
