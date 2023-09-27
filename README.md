@@ -206,23 +206,35 @@ slow. For nearly as fast performance with better compile times, run
 cargo run --profile=local --example standard_plonk
 ```
 
-### `PolyMul`
+### `poly_mul`
 
 ```bash
-cargo run --example polymul -- --name poly_input  -k 11  mock
+cargo run --example poly_mul -- --name poly_input  -k 11  mock
 ```
 
-### `PolyAdd`
+### `poly_add`
 
 ```bash
-cargo run --example polyadd -- --name poly_input  -k 11  mock
+cargo run --example poly_add -- --name poly_input  -k 11  mock
 ```
 
-### `PolyScalarMul`
+### `poly_scalarmul`
 
 ```bash
-cargo run --example polyscalarmul -- --name poly_input_2  -k 11  mock
+cargo run --example poly_scalarmul -- --name poly_input_2  -k 11  mock
 ```
 
+### `poly_reduce`
+
+```bash
+env LOOKUP_BITS=8 cargo run --example poly_reduce -- --name poly_reduce -k 12 --input poly_reduce.in mock
+```
+
+
+### `poly_divide_by_cyclo`
+
+```bash
+env LOOKUP_BITS=8 cargo run --example poly_divide_by_cyclo -- --name poly_divide_by_cyclo -k 12 --input poly_divide_by_cyclo.in mock
+```
 
 
