@@ -14,15 +14,15 @@ use serde::{Deserialize, Serialize};
 
 // Note:
 // - The polynomial are not made public to the outside
-// - Suppoe that range check is performed on the coeffiicients in order to avoid overflow for happen during the addition
+// - Range check is performed on the coeffiicients
 
-const DEGREE: usize = 3;
+const N: usize = 3;
 const MODULUS: usize = 11;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CircuitInput {
-    pub poly: Vec<u8>, // polynomial coefficients big endian of degree DEGREE
-    pub out: Vec<u8>, // polynomial coefficients big endian of degree DEGREE
+    pub poly: Vec<u8>, // polynomial coefficients big endian of degree N (last element = constant term)
+    pub out: Vec<u8>, // polynomial coefficients big endian of degree N (last element = constant term)
 }
 
 // takes a polynomial represented by its coefficients in a vector (public input)
@@ -33,8 +33,8 @@ fn reduce_poly<F: ScalarField>(
     make_public: &mut Vec<AssignedValue<F>>,
 ) {
 
-	// Assert that degree is equal to the constant DEGREE
-    assert_eq!(input.poly.len() - 1, DEGREE);
+	// Assert that degree is equal to the constant N
+    assert_eq!(input.poly.len() - 1, N);
 
     // Assign the input polynomials to the circuit
     let in_assigned: Vec<AssignedValue<F>> = input
@@ -55,15 +55,15 @@ fn reduce_poly<F: ScalarField>(
 
 	// Enforce that in_assigned[i] % MODULUS = rem_assigned[i]
 	// We hardcoded MODULUS = 11 in this case, therefore
-	// rem = [0, 10], so it should be at most 4 (log2_fllor(10)) bits
+	// rem = [0, 10], so it should be at most 4 (log2_floor(10)) bits
 	let rem_assigned: Vec<AssignedValue<F>> = in_assigned
 	.iter()
-	.take(2 * DEGREE - 1)
+	.take(2 * N - 1)
 	.map(|&x|range.div_mod(ctx, x, MODULUS, 4).1)
 	.collect();
 
 	// make the output public
-	for i in 0..(DEGREE - 1) {
+	for i in 0..(N - 1) {
 		make_public.push(rem_assigned[i]);
 	}
 
