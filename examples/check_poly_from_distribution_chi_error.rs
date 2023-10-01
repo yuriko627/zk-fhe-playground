@@ -15,7 +15,7 @@ use halo2_scaffold::scaffold::run;
 use serde::{Deserialize, Serialize};
 
 const N: usize = 3; // degree of the polynomial
-const Q: u64 = 2u64.pow(8); // modulus of the field F_q
+const Q: u64 = 2u64.pow(8) + 1; // modulus of the field F_q
 const B: u64 = 30; // upper bound of the distribution [-b, b]
 
 // Notes:
@@ -29,17 +29,13 @@ pub struct CircuitInput<const N: usize> {
 
 // this algorithm takes a polynomial a and the upper bound of a distrbution [-b, b] and checks if the coefficients of a are in the range.
 // if the coefficients are in the range, it means that the polynomial was sampled from the distribution
-fn check_poly_from_distribution<F: ScalarField>(
+fn check_poly_from_distribution_chi_error<F: ScalarField>(
     ctx: &mut Context<F>,
     input: CircuitInput<N>,
     make_public: &mut Vec<AssignedValue<F>>,
 ) {
     // // Since we cannot represent negative numbers in the circuit, the value - 1 is represented as the field element q - 1.
     // // Therefore we split the range [-b, b] into two ranges [0, b] and [q-b, q-1]
-    // // First of all, test outside the circuit that the coefficients of the polynomial are in the range [0, b] or in the range [q-b, q-1]
-    // for i in 0..N + 1 {
-    //     assert!((input.a[i] <= B) || (Q - B <= input.a[i] && input.a[i] < Q));
-    // }
 
     // Assign the input polynomial to the circuit
     let a_assigned: Vec<AssignedValue<F>> = input
@@ -94,5 +90,5 @@ fn main() {
     let args = Cli::parse();
 
     // run different zk commands based on the command line arguments
-    run(check_poly_from_distribution, args);
+    run(check_poly_from_distribution_chi_error, args);
 }

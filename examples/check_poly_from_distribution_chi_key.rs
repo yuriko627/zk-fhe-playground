@@ -13,7 +13,7 @@ use halo2_scaffold::scaffold::run;
 use serde::{Deserialize, Serialize};
 
 const N: usize = 3; // degree of the polynomial
-const Q: u64 = 2u64.pow(8); // modulus of the field F_q
+const Q: u64 = 2u64.pow(8) + 1; // modulus of the field F_q
 
 // Notes:
 // - The input polynomial is not made public
@@ -26,7 +26,7 @@ pub struct CircuitInput<const N: usize> {
 
 // this algorithm takes a polynomial a and checks if the coefficients of a are in the range [-1, 0, +1].
 // if the coefficients are in the range, it means that the polynomial was sampled from the distribution
-fn check_poly_from_distribution<F: ScalarField>(
+fn check_poly_from_distribution_chi_key<F: ScalarField>(
     ctx: &mut Context<F>,
     input: CircuitInput<N>,
     make_public: &mut Vec<AssignedValue<F>>,
@@ -84,5 +84,5 @@ fn main() {
     let args = Cli::parse();
 
     // run different zk commands based on the command line arguments
-    run(check_poly_from_distribution, args);
+    run(check_poly_from_distribution_chi_key, args);
 }
