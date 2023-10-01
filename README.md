@@ -230,6 +230,17 @@ cargo run --example poly_scalarmul -- --name poly_input_2  -k 11  mock
 env LOOKUP_BITS=8 cargo run --example poly_reduce -- --name poly_reduce -k 12 --input poly_reduce.in mock
 ```
 
+### `CheckPolyFromDistributionChiError`
+
+```bash
+LOOKUP_BITS=9 cargo run --example check_poly_from_distribution_chi_error -- --name poly_input_3 -k 11  mock
+```
+
+### `CheckPolyFromDistributionChiKey`
+
+```bash
+cargo run --example check_poly_from_distribution_chi_key -- --name poly_input_4 -k 11  mock
+```
 
 ### `poly_divide_by_cyclo`
 

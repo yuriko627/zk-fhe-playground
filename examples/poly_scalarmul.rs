@@ -48,7 +48,7 @@ fn poly_scalar_mul<F: ScalarField>(
     // Enforce that a_assigned[i] * k = scalar_prod_assigned[i]
     let gate = GateChip::<F>::default();
     let mut scalar_prod_assigned = Vec::new();
-    for i in 0..(N - 1) {
+    for i in 0..(N + 1) {
         let scalar_prod = gate.mul(ctx, a_assigned[i], k_assigned);
         scalar_prod_assigned.push(scalar_prod);
         make_public.push(scalar_prod);
@@ -68,6 +68,9 @@ fn poly_scalar_mul<F: ScalarField>(
 
     // iter over the c coefficients and turn it into F
     let c_f = c_coeffs.iter().map(|x| F::from_str_vartime(x).unwrap()).collect::<Vec<F>>();
+
+    // assert that the length of the circuit result is equal to the length of the result of the multiplication
+    assert_eq!(scalar_prod_assigned.len(), c_f.len());
 
     // Compare the result of the circuit with the result of the multiplication
     for (prod, c) in scalar_prod_assigned.iter().zip(c_f) {

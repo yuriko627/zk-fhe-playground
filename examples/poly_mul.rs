@@ -120,6 +120,9 @@ pub fn poly_mul<F: ScalarField>(
     // iter over the c coefficients and turn it into F
     let c_f = c_coeffs.iter().map(|x| F::from_str_vartime(x).unwrap()).collect::<Vec<F>>();
 
+    // assert that the length of the circuit result is equal to the length of the result of the multiplication
+    assert_eq!(prod_val.len(), c_f.len());
+
     // Compare the result of the circuit with the result of the multiplication
     for (prod, c) in prod_val.iter().zip(c_f) {
         assert_eq!(prod.value(), &c);
