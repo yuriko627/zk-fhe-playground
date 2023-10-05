@@ -11,3 +11,11 @@
 /target
 
 /params
+
+*.pk
+
+*.snark
+
+*.vk
+
+configs/

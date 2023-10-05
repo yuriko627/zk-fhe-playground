@@ -1,4 +1,3 @@
-use std::env::var;
 use clap::Parser;
 use halo2_base::safe_types::{RangeChip, RangeInstructions};
 use halo2_base::utils::ScalarField;
@@ -11,10 +10,11 @@ use halo2_base::{
 use halo2_scaffold::scaffold::cmd::Cli;
 use halo2_scaffold::scaffold::run;
 use serde::{Deserialize, Serialize};
+use std::env::var;
 
-// Note:
-// - The polynomial are not made public to the outside
-// - Range check is performed on the coeffiicients
+// Assumptions:
+// - The coefficients of the dividend polynomial are in the range of 16 bits
+// - The divisor polynomial is a cyclotomic polynomial of degree M
 
 const N: usize = 3;
 const MODULUS: usize = 11;
@@ -33,6 +33,7 @@ fn reduce_poly<F: ScalarField>(
     make_public: &mut Vec<AssignedValue<F>>,
 ) {
 
+
 	// Assert that degree is equal to the constant N
     assert_eq!(input.poly.len() - 1, N);
 
@@ -46,32 +47,30 @@ fn reduce_poly<F: ScalarField>(
         })
         .collect();
 
-	// needs to be compatible with some backend setup for lookup table to do range check
-	// so read from environemntal variable
-	let lookup_bits = var("LOOKUP_BITS").unwrap_or_else(|_| panic!("LOOKUP_BITS nto set")).parse().unwrap();
+    // needs to be compatible with some backend setup for lookup table to do range check
+    // so read from environemntal variable
+    let lookup_bits =
+        var("LOOKUP_BITS").unwrap_or_else(|_| panic!("LOOKUP_BITS nto set")).parse().unwrap();
 
-	// instead of GateChip create a RangeChip, which allows you to do range check
-	let range = RangeChip::default(lookup_bits);
+    // instead of GateChip create a RangeChip, which allows you to do range check
+    let range = RangeChip::default(lookup_bits);
 
-	// Enforce that in_assigned[i] % MODULUS = rem_assigned[i]
-	// We hardcoded MODULUS = 11 in this case, therefore
-	// rem = [0, 10], so it should be at most 4 (log2_floor(10)) bits
-	let rem_assigned: Vec<AssignedValue<F>> = in_assigned
-	.iter()
-	.take(2 * N - 1)
-	.map(|&x|range.div_mod(ctx, x, MODULUS, 4).1)
-	.collect();
+    // Enforce that in_assigned[i] % MODULUS = rem_assigned[i]
+    // coefficients of input polynomials are guaranteed to be at most 16 bits by assumption
+    let rem_assigned: Vec<AssignedValue<F>> =
+        in_assigned.iter().take(2 * N - 1).map(|&x| range.div_mod(ctx, x, MODULUS, 16).1).collect();
 
-	// make the output public
-	for i in 0..(N - 1) {
-		make_public.push(rem_assigned[i]);
-	}
+    // make the output public
+    for i in 0..(N + 1) {
+        make_public.push(rem_assigned[i]);
+    }
 
-	// check that rem_assined = output of the circuit
-	let out_expected = input.out;
 
-	for (rem, out) in rem_assigned.iter().zip(out_expected) {
-        assert_eq!(rem.value().get_lower_32(), out as u32);
+    // check that rem_assigned = output of the circuit
+    let out_expected = input.out;
+
+    for i in 0..N {
+        assert_eq!(*rem_assigned[i].value(), F::from(out_expected[i] as u64));
     }
 }
 
